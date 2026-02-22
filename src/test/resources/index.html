@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enterprise Invoice Uploader (Smart Validation)</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f4f6f9; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        .container { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); width: 500px; text-align: center; }
+        h2 { color: #2c3e50; margin-bottom: 20px; }
+        .upload-area { border: 2px dashed #bdc3c7; padding: 30px; border-radius: 8px; margin-bottom: 20px; transition: 0.3s; }
+        .upload-area:hover { border-color: #3498db; background: #ecf0f1; }
+        input[type="file"] { display: none; }
+        label { cursor: pointer; background: #3498db; color: white; padding: 10px 20px; border-radius: 5px; font-weight: bold; }
+        button { background: #27ae60; color: white; border: none; padding: 12px 25px; border-radius: 5px; font-size: 16px; cursor: pointer; margin-top: 15px; width: 100%; }
+        button:hover { background: #219150; }
+        #status-message { margin-top: 20px; font-weight: bold; padding: 10px; border-radius: 5px; display: none; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .loader { border: 5px solid #f3f3f3; border-top: 5px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; display: none; margin: 20px auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .processing-text { display: none; color: #7f8c8d; font-size: 14px; margin-top: 5px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>📄 Smart Bulk Invoice Upload</h2>
+    <p style="color: #7f8c8d; font-size: 14px;">Enterprise Edition v2.0<br>Features: Deep Content Scanning & Anti-Fraud Check</p>
+
+    <div class="upload-area">
+        <input type="file" id="fileInput" accept=".csv">
+        <label for="fileInput">Choose File</label>
+        <p id="fileName" style="margin-top: 10px; font-size: 13px; color: #555;">No file chosen</p>
+    </div>
+
+    <div class="loader" id="loader"></div>
+    <p class="processing-text" id="procText">Scanning invoice barcodes...</p>
+
+    <button onclick="processUpload()" id="uploadBtn">Upload Invoices</button>
+    <div id="status-message"></div>
+</div>
+
+<script>
+    document.getElementById('fileInput').addEventListener('change', function() {
+        var fileName = this.files[0] ? this.files[0].name : "No file chosen";
+        document.getElementById('fileName').textContent = fileName;
+        document.getElementById('status-message').style.display = 'none';
+    });
+
+    function processUpload() {
+        var fileInput = document.getElementById('fileInput');
+        var statusDiv = document.getElementById('status-message');
+        var loader = document.getElementById('loader');
+        var procText = document.getElementById('procText');
+
+        statusDiv.style.display = 'none';
+
+        if (!fileInput.files.length) {
+            showError("Please select a file first");
+            return;
+        }
+
+        var file = fileInput.files[0];
+
+        if (!file.name.endsWith('.csv')) {
+            showError("Invalid File Format");
+            return;
+        }
+
+        if (file.size === 0) {
+            showError("File is empty");
+            return;
+        }
+
+        loader.style.display = 'block';
+        procText.style.display = 'block';
+        document.getElementById('uploadBtn').disabled = true;
+        document.getElementById('uploadBtn').style.background = "#bdc3c7";
+
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            var content = e.target.result;
+            var lines = content.split(/\r\n|\n/);
+
+            // 6 second delay for demo processing
+            setTimeout(function() {
+                loader.style.display = 'none';
+                procText.style.display = 'none';
+                document.getElementById('uploadBtn').disabled = false;
+                document.getElementById('uploadBtn').style.background = "#27ae60";
+                validateContent(lines);
+            }, 6000);
+        };
+        reader.readAsText(file);
+    }
+
+    function validateContent(lines) {
+        var ids = new Set();
+        var validCount = 0;
+
+        for (var i = 1; i < lines.length; i++) {
+            var line = lines[i].trim();
+            if (line) {
+                var columns = line.split(',');
+                var id = columns[0];
+
+                if (!id.startsWith("INV-")) {
+                    showError("Security Alert: Invalid Invoice Pattern Detected");
+                    return;
+                }
+                if (ids.has(id)) {
+                    showError("Data Error: Duplicate Invoice ID Found");
+                    return;
+                }
+                ids.add(id);
+                validCount++;
+            }
+        }
+        showSuccess("Upload Successful!");
+    }
+
+    function showError(msg) {
+        var div = document.getElementById('status-message');
+        div.textContent = msg;
+        div.className = "error";
+        div.style.display = 'block';
+    }
+
+    function showSuccess(msg) {
+        var div = document.getElementById('status-message');
+        div.textContent = msg;
+        div.className = "success";
+        div.style.display = 'block';
+    }
+</script>
+
+</body>
+</html>
